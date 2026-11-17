@@ -237,7 +237,9 @@ function stepRow(step, index, failed) {
       isFailed ? h("div", { class: "err" }, `Last run stopped here: ${failed.error}`) : null),
     valueEditor(step),
     h("div", { class: "ops" },
-      hasTarget ? h("button", { class: "btn ghost small", title: "Advanced: how the element is found", onclick: () => { openAdvanced.has(step.id) ? openAdvanced.delete(step.id) : openAdvanced.add(step.id); renderMain(); } }, "⚙") : null,
+      hasTarget
+        ? h("button", { class: "btn ghost small", title: "Advanced: how the element is found", onclick: () => { openAdvanced.has(step.id) ? openAdvanced.delete(step.id) : openAdvanced.add(step.id); renderMain(); } }, "⚙")
+        : h("span", { class: "btn ghost small", style: "visibility: hidden;", "aria-hidden": "true" }, "⚙"), // keeps the buttons aligned
       h("button", { class: "btn ghost small", title: "Move up", disabled: index === 0, onclick: () => moveStep(index, -1) }, "↑"),
       h("button", { class: "btn ghost small", title: "Move down", disabled: index === current.steps.length - 1, onclick: () => moveStep(index, 1) }, "↓"),
       h("button", { class: "btn ghost small", title: "Duplicate", onclick: () => { current.steps.splice(index + 1, 0, { ...structuredClone(step), id: TT.uid() }); scheduleSave(true); } }, "⧉"),

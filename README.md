@@ -6,6 +6,8 @@ TaskTape is a Chrome extension for people who do the same clicks and typing agai
 
 No account, no server, no coding. Everything stays in your browser.
 
+![The TaskTape manager showing a recorded automation with its steps](docs/images/manager.png)
+
 ## Features
 
 - **One-click recording** of clicks, typing, drop-downs, checkboxes, the Enter/Escape keys, form submissions and page changes.
@@ -35,6 +37,14 @@ After changing the code, click the ↻ reload button on the extension card.
 4. Press **■ Stop** in the red bar at the bottom right of the page. The manager opens with your recorded steps.
 5. Check the steps, then press **▶ Run**.
 
+<p align="center">
+  <img src="docs/images/popup.png" alt="The TaskTape popup: record a new task or run a saved one" width="320">
+</p>
+
+While recording, a red bar shows how many steps were captured. You can add a pause with **+ Wait 2s** or finish with **■ Stop**.
+
+![Recording on a web page: the red TaskTape bar at the bottom right](docs/images/recording.png)
+
 ### Values that change at each run
 
 In the manager, replace a typed text by a name between double braces, for example `{{Invoice number}}`. When you run the automation, TaskTape asks for the value. The last values you entered are remembered (except passwords, PINs and tokens).
@@ -42,6 +52,8 @@ In the manager, replace a typed text by a name between double braces, for exampl
 ### File uploads
 
 When you pick a file during a recording, TaskTape records an **Upload** step and remembers only the file name, as a reminder.
+
+![A run paused on an upload step, asking the user to choose the file](docs/images/upload.png)
 
 On each run, TaskTape pauses at that step, brings the page to the front and shows a **Choose the file** panel. Pick a file or drop one onto the panel, and the run continues. You can also **Skip this step** or **Stop the run** from the panel. While waiting, the popup shows the run as paused, with a **Show the page** button. If no file is chosen within 30 minutes, the run stops.
 
@@ -78,6 +90,7 @@ TaskTape makes no network requests of its own and has no analytics. Automations 
 | `editor.html` / `editor.js` | Manager: edit steps, settings, history, import/export |
 | `ui.css` | Shared styles |
 | `icons/icon.svg` | Icon source |
+| `docs/images/` | Screenshots used in this README |
 
 ## Publishing
 

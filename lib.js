@@ -99,7 +99,7 @@ const TT = (() => {
       case "check": return `${step.value === "false" ? "Untick" : "Tick"} “${label}”`;
       case "key": return `Press ${step.value || "Enter"}`;
       case "submit": return "Submit the form";
-      case "upload": return `Upload a file to “${label}” (you choose it at each run)`;
+      case "upload": return `Upload a file to “${label}”`;
       case "wait": return `Wait ${Math.round((step.ms || 1000) / 100) / 10}s`;
       case "waitFor": return `Wait until “${label}” appears`;
       default: return step.type;
@@ -162,6 +162,9 @@ const TT = (() => {
     if (s < 60) return "just now";
     if (s < 3600) return `${Math.round(s / 60)} min ago`;
     if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+    const days = Math.round(s / 86400);
+    if (days === 1) return "yesterday";
+    if (days < 7) return `${days} days ago`;
     return new Date(ms).toLocaleDateString();
   }
 
