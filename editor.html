@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TaskTape · Manager</title>
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { display: grid; grid-template-columns: 290px 1fr; min-height: 100vh; }
+    aside { background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
+    aside header { padding: 16px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+    aside .tools { display: flex; gap: 6px; }
+    aside .tools .btn { flex: 1; }
+    #autoList { list-style: none; margin: 0; padding: 8px; overflow: auto; flex: 1; }
+    #autoList li { padding: 9px 10px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+    #autoList li:hover { background: #f1f5f9; }
+    #autoList li.active { background: var(--accent-soft); }
+    #autoList .n { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #autoList .m { font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+    aside footer { padding: 12px 16px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+
+    main { padding: 24px 32px 60px; max-width: 1100px; width: 100%; }
+    .banner { border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+    .banner.info { background: var(--accent-soft); color: #3730a3; border: 1px solid #c7d2fe; }
+    .banner.new { background: var(--green-soft); color: var(--green); border: 1px solid #bbf7d0; }
+    .top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+    .top .title { flex: 1; }
+    #nameInput { font-size: 20px; font-weight: 800; border-color: transparent; padding: 4px 8px; margin-left: -8px; }
+    #nameInput:hover { border-color: var(--line); }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .save-state { font-size: 11px; color: var(--muted); margin: 2px 0 0; min-height: 15px; }
+    .settings { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 18px; }
+    .vars-note { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+    .vars-note code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; color: var(--ink); }
+
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; }
+    .steps { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .step { display: grid; grid-template-columns: 26px 28px 92px 1fr minmax(180px, 280px) auto; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
+    .step:first-child { border-top: none; }
+    .step.off { opacity: .45; }
+    .step.failed { background: var(--red-soft); }
+    .step .num { font-weight: 700; color: var(--muted); text-align: right; font-size: 12px; }
+    .type { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; padding: 2px 8px; border-radius: 6px; text-align: center; }
+    .t-navigate { background: #e0f2fe; color: #0369a1; } .t-click { background: var(--accent-soft); color: #4338ca; }
+    .t-type, .t-select, .t-check { background: #fef3c7; color: #92400e; } .t-upload { background: #dcfce7; color: #15803d; } .t-key, .t-submit { background: #ede9fe; color: #6d28d9; }
+    .t-wait, .t-waitFor { background: #f1f5f9; color: var(--muted); }
+    .desc { min-width: 0; }
+    .desc .d { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .desc .s { font-size: 11px; color: var(--muted); font-family: ui-monospace, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .desc .err { font-size: 12px; color: var(--red); font-weight: 600; margin-top: 2px; }
+    .value input, .value select { padding: 5px 8px; font-size: 12px; }
+    .value .inline { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .value .inline input { width: auto; }
+    .ops { display: flex; gap: 2px; }
+    .ops .btn { padding: 3px 7px; }
+    .advanced { grid-column: 3 / -1; display: grid; grid-template-columns: 1fr 1fr 120px; gap: 10px; background: var(--bg); border-radius: 8px; padding: 10px; }
+    .advanced textarea { font-family: ui-monospace, Consolas, monospace; font-size: 12px; min-height: 70px; }
+    .add-bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--bg); }
+
+    .runs { margin-top: 22px; }
+    .runs table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .runs td, .runs th { text-align: left; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 12px; }
+    .runs th { background: var(--bg); color: var(--muted); font-weight: 700; border-top: none; }
+
+    .empty-state { text-align: center; padding: 80px 20px; color: var(--muted); }
+    .empty-state h1 { font-size: 22px; margin-bottom: 8px; }
+    .empty-state ol { text-align: left; display: inline-block; margin: 16px auto; line-height: 2; color: var(--body); }
+
+    dialog { border: none; border-radius: 14px; padding: 20px; width: 380px; box-shadow: 0 20px 60px rgba(15,23,42,.3); }
+    dialog::backdrop { background: rgba(15,23,42,.4); }
+    dialog form { display: flex; flex-direction: column; gap: 10px; }
+  </style>
+</head>
+<body>
+  <aside>
+    <header>
+      <div class="brand"><span class="logo">▶</span>TaskTape</div>
+      <input id="filter" placeholder="Search automations…">
+      <div class="tools">
+        <button id="importBtn" class="btn small" title="Import automations from a .json file">Import</button>
+        <button id="exportAllBtn" class="btn small" title="Download all automations as one .json file">Export all</button>
+      </div>
+      <input id="importFile" type="file" accept=".json,application/json" class="hidden">
+    </header>
+    <ul id="autoList"></ul>
+    <footer>Everything is stored in this browser only. To record, open a website and click the TaskTape icon.</footer>
+  </aside>
+  <main id="main"></main>
+
+  <dialog id="varsDialog">
+    <form method="dialog" id="varsForm">
+      <h3>Values for this run</h3>
+      <div id="varsFields" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      <!-- "Run now" comes first in the markup so pressing Enter runs; row-reverse shows it on the right. -->
+      <div style="display: flex; gap: 8px; flex-direction: row-reverse;">
+        <button value="run" class="btn primary">▶ Run now</button>
+        <button value="cancel" class="btn ghost" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="lib.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>
