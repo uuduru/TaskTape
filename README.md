@@ -119,3 +119,4 @@ The same zip can be published on the Microsoft Edge Add-ons store.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+Duru Ugochukwu
