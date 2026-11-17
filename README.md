@@ -116,8 +116,10 @@ The same zip can be published on the Microsoft Edge Add-ons store.
 - Assertions such as "check that this text appears"
 - A keyboard shortcut to run a favourite automation
 
+## Author
+
+Created by **Duru Ugochukwu**. Questions, ideas and bug reports are welcome in the repository's Issues.
+
 ## License
 
-MIT. See [LICENSE](LICENSE).
-
-Duru Ugochukwu
+MIT © 2026 Duru Ugochukwu. See [LICENSE](LICENSE).
