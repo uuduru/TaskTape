@@ -1,0 +1,85 @@
+name: 🐞 Report a problem
+description: Something doesn't record, doesn't replay, or behaves strangely.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem!
+        **Privacy:** issues are public. Don't paste passwords, personal data or private company addresses (URLs).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+      placeholder: "I recorded a login + a click on 'Export', but on replay step 4 fails with: Could not find “Export” on the page."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we reproduce it?
+      description: The steps you followed. If possible, a public website where it also happens.
+      placeholder: |
+        1. Open https://example.com
+        2. Record: click "More information"
+        3. Run the automation
+        4. Step 2 fails
+    validations:
+      required: true
+
+  - type: dropdown
+    id: when
+    attributes:
+      label: When does it happen?
+      options:
+        - While recording
+        - While replaying (running)
+        - During a file upload step
+        - In the popup
+        - In the manager (editing, import/export)
+        - Installing / loading the extension
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: error
+    attributes:
+      label: Error message
+      description: The message shown in the page bar, the popup or the "Recent runs" table, if any.
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      description: Open chrome://version (or edge://version) and copy the first line.
+      placeholder: "Chrome 142.0.7444.60 (Windows 11)"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: TaskTape version
+      description: Shown on the extension card in chrome://extensions.
+      placeholder: "1.0.0"
+
+  - type: textarea
+    id: export
+    attributes:
+      label: Exported automation (optional, very helpful)
+      description: |
+        In the manager, click **Export** and paste the file content here.
+        ⚠️ Check it first: it contains the text you typed while recording. Replace anything private with `{{Something}}`.
+      render: json
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed passwords, personal data and private URLs from this report.
+          required: true

@@ -1,0 +1,26 @@
+name: 💡 Suggest an idea
+description: A feature or improvement that would save you time.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: task
+    attributes:
+      label: What task are you trying to automate?
+      description: Describe the repetitive work. Concrete examples help a lot.
+      placeholder: "Every morning I download the same 3 reports and upload them to another tool."
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like TaskTape to do?
+      placeholder: "Run an automation automatically every weekday at 9:00."
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you do it today?
+      description: Any workaround you use, or why the current features are not enough.

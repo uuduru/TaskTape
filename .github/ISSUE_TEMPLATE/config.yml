@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ❓ Ask a question
+    url: https://github.com/uuduru/TaskTape/discussions/categories/q-a
+    about: How do I…? Is it possible to…? Ask and share tips with other users.
+  - name: 🔒 Report a security problem privately
+    url: https://github.com/uuduru/TaskTape/security/advisories/new
+    about: Please don't open a public issue for security problems.

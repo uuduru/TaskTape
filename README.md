@@ -116,10 +116,19 @@ The same zip can be published on the Microsoft Edge Add-ons store.
 - Assertions such as "check that this text appears"
 - A keyboard shortcut to run a favourite automation
 
+## Help and feedback
+
+- 🐞 **Something doesn't work?** [Report a problem](https://github.com/uuduru/TaskTape/issues/new?template=bug_report.yml). You can also use the **Report a problem** link at the bottom of the manager.
+- 💡 **An idea?** [Suggest a feature](https://github.com/uuduru/TaskTape/issues/new?template=feature_request.yml).
+- ❓ **A question?** [Ask in Discussions](https://github.com/uuduru/TaskTape/discussions).
+- 🔒 **A security problem?** [Report it privately](https://github.com/uuduru/TaskTape/security/advisories/new) (see [SECURITY.md](SECURITY.md)).
+
+Issues are public: don't paste passwords, personal data or private company URLs. Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Author
 
-Created by **Duru Ugochukwu**. Questions, ideas and bug reports are welcome in the repository's Issues.
+Created by ([@uuduru](https://github.com/uuduru)).
 
 ## License
 
-MIT © 2026 Duru Ugochukwu. See [LICENSE](LICENSE).
+MIT © 2026. See [LICENSE](LICENSE).

@@ -5,6 +5,7 @@
   "version": "1.0.0",
   "description": "Record the clicks and typing you repeat every day in your browser, then replay them in one click.",
   "author": "Duru Ugochukwu",
+  "homepage_url": "https://github.com/uuduru/TaskTape",
   "permissions": ["storage", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {

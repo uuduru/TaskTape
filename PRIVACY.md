@@ -14,4 +14,4 @@ TaskTape is a browser extension that records and replays actions you choose to r
 
 **Deleting your data.** Delete automations in the manager, or remove the extension: Chrome then deletes all its data.
 
-**Contact.** Open an issue on the project's repository.
+**Contact.** Open an issue at https://github.com/uuduru/TaskTape/issues. For security problems, report privately at https://github.com/uuduru/TaskTape/security/advisories/new.
