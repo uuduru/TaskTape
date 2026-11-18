@@ -80,6 +80,43 @@ const TT = (() => {
 
   const hasPlaceholder = (text) => typeof text === "string" && new RegExp(VAR_RE.source).test(text);
 
+  // Steps that act on an element of the page (a "key" step may also have one, but doesn't need it).
+  const ELEMENT_TYPES = ["click", "type", "select", "check", "submit", "upload", "waitFor"];
+  const needsElement = (step) => ELEMENT_TYPES.includes(step?.type);
+  const hasElement = (step) => !!(step?.target?.selectors?.length || step?.target?.text);
+
+  // A "type" or "select" step whose whole value is one {{Question}} is asked at each run.
+  // The value typed while recording is kept in step.recordedValue and offered as the suggested answer.
+  const ASKABLE = ["type", "select"];
+  const PLACEHOLDER_ONLY = /^\{\{\s*([A-Za-z][\w .-]*?)\s*\}\}$/;
+  function askedName(step) {
+    if (!ASKABLE.includes(step?.type) || typeof step.value !== "string") return null;
+    const match = step.value.match(PLACEHOLDER_ONLY);
+    return match ? match[1] : null;
+  }
+
+  // Turns any label into a valid question name for {{…}}.
+  function toVarName(text) {
+    let name = String(text || "").replace(/[^\w .-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
+    if (!/^[A-Za-z]/.test(name)) name = name ? `Value ${name}` : "Value";
+    return name;
+  }
+
+  // Everything to ask before a run: [{ name, defaultValue, secret }]. Steps using the same name share one answer.
+  function promptsOf(automation) {
+    const prompts = new Map();
+    for (const name of variablesOf(automation)) prompts.set(name, { name, defaultValue: "", secret: isSecretName(name) });
+    for (const step of automation.steps || []) {
+      if (step.enabled === false) continue;
+      const prompt = prompts.get(askedName(step));
+      if (!prompt) continue;
+      if (step.secret) prompt.secret = true;
+      if (!prompt.defaultValue && typeof step.recordedValue === "string") prompt.defaultValue = step.recordedValue;
+    }
+    for (const prompt of prompts.values()) if (prompt.secret) prompt.defaultValue = "";
+    return [...prompts.values()];
+  }
+
   function shortUrl(url) {
     try {
       const u = new URL(url);
@@ -89,13 +126,20 @@ const TT = (() => {
     }
   }
 
+  // How a step is named before its element is chosen.
+  const UNPICKED = {
+    click: "Click an element", type: "Type in a text field", select: "Choose an option in a list", check: "Tick a box",
+    submit: "Submit a form", upload: "Upload a file", waitFor: "Wait for an element",
+  };
+
   function describe(step) {
+    if (UNPICKED[step.type] && !step.target?.label && !step.target?.text && !step.target?.selectors?.length) return UNPICKED[step.type];
     const label = step.target?.label || step.target?.text || "element";
     switch (step.type) {
       case "navigate": return step.auto ? `Page changes to ${shortUrl(step.url)}` : `Open ${shortUrl(step.url)}`;
       case "click": return `Click “${label}”`;
-      case "type": return `Type in “${label}”`;
-      case "select": return `Choose an option in “${label}”`;
+      case "type": return `Type in “${label}”${askedName(step) ? " · asked at each run" : ""}`;
+      case "select": return `Choose an option in “${label}”${askedName(step) ? " · asked at each run" : ""}`;
       case "check": return `${step.value === "false" ? "Untick" : "Tick"} “${label}”`;
       case "key": return `Press ${step.value || "Enter"}`;
       case "submit": return "Submit the form";
@@ -137,7 +181,12 @@ const TT = (() => {
           ms: Number(s.ms) || undefined,
           timeout: Number(s.timeout) || undefined,
           optionText: typeof s.optionText === "string" ? s.optionText : undefined,
+          recordedValue: typeof s.recordedValue === "string" ? s.recordedValue : undefined,
+          secret: s.secret === true ? true : undefined,
           multiple: s.multiple === true ? true : undefined,
+          options: Array.isArray(s.options)
+            ? s.options.slice(0, 100).filter((o) => o && typeof o.text === "string").map((o) => ({ value: String(o.value ?? ""), text: o.text }))
+            : undefined,
           accept: typeof s.accept === "string" ? s.accept : undefined,
           target: s.target && Array.isArray(s.target.selectors)
             ? { selectors: s.target.selectors.filter((x) => typeof x === "string"), text: String(s.target.text || ""), tag: String(s.target.tag || ""), label: String(s.target.label || "") }
@@ -157,6 +206,19 @@ const TT = (() => {
     };
   }
 
+  // Talk to the background worker from the popup / manager. Always resolves to { ok, result } or { ok: false, error }.
+  // No answer usually means Chrome still runs an older background after TaskTape's files were updated.
+  const NO_ANSWER = "TaskTape's background did not answer. If TaskTape was just updated, reload it: open chrome://extensions, press ↻ on the TaskTape card, then try again.";
+  async function ask(message) {
+    try {
+      const response = await chrome.runtime.sendMessage(message);
+      return response ?? { ok: false, error: NO_ANSWER };
+    } catch (error) {
+      const text = error?.message || "";
+      return { ok: false, error: /receiving end|port closed|channel closed|context invalidated/i.test(text) || !text ? NO_ANSWER : text };
+    }
+  }
+
   function timeAgo(ms) {
     const s = Math.round((Date.now() - ms) / 1000);
     if (s < 60) return "just now";
@@ -172,7 +234,7 @@ const TT = (() => {
     AUTO, RUNS, VARS, STEP_TYPES, uid,
     listAutomations, getAutomation, saveAutomation, deleteAutomation,
     getRuns, addRun, getSavedVars, saveVars, isSecretName,
-    variablesOf, fill, hasPlaceholder, describe, shortUrl, newAutomation, parseImport, exportData, timeAgo,
+    ask, variablesOf, fill, hasPlaceholder, ELEMENT_TYPES, needsElement, hasElement, askedName, toVarName, promptsOf, describe, shortUrl, newAutomation, parseImport, exportData, timeAgo,
   };
 })();
 

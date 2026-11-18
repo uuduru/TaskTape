@@ -141,6 +141,9 @@
     }
   }
 
+  // The choices of a drop-down list, so the manager can offer them in a list.
+  const optionsOf = (select) => [...select.options].slice(0, 100).map((o) => ({ value: o.value, text: o.text.trim() }));
+
   // ───────────────────────────── Recording ─────────────────────────────
   function emit(step) {
     if (!recording) return;
@@ -157,7 +160,7 @@
   function emitType(el) {
     const isPassword = el.tagName === "INPUT" && el.type === "password";
     const value = isPassword ? `{{${variableNameFor(el)}}}` : el.isContentEditable ? el.innerText : el.value;
-    emit({ type: "type", target: buildTarget(el), value });
+    emit({ type: "type", target: buildTarget(el), value, ...(isPassword ? { secret: true } : {}) });
   }
 
   function flushInputs() {
@@ -209,7 +212,7 @@
     if (el.tagName === "SELECT") {
       flushInputs();
       const option = el.options[el.selectedIndex];
-      emit({ type: "select", target: buildTarget(el), value: el.value, optionText: option ? option.text.trim() : "" });
+      emit({ type: "select", target: buildTarget(el), value: el.value, optionText: option ? option.text.trim() : "", options: optionsOf(el) });
     } else if (el.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio")) {
       flushInputs();
       emit({ type: "check", target: buildTarget(el), value: String(el.checked) });
@@ -424,6 +427,160 @@
     return { ok: true };
   }
 
+  // ───────────────────────────── Element picker ─────────────────────────────
+  // Used by the manager ("Pick on page") to choose the element of a step added by hand, or to fix a step.
+  // While picking, clicks select an element instead of reaching the page. "Pause" lets the user navigate first.
+  let picker = null; // { kind, status: "picking" | "done" | "cancelled", result, host, cleanup }
+
+  const isCheckInput = (el) => el?.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio");
+  const isFileInput = (el) => el?.tagName === "INPUT" && el.type === "file";
+  const PICK_RULES = {
+    type: { test: isTextField, need: "a text field" },
+    select: { test: (el) => el?.tagName === "SELECT", need: "a drop-down list" },
+    check: { test: isCheckInput, need: "a checkbox or a radio button" },
+    upload: { test: isFileInput, need: "a file field or its upload button" },
+  };
+
+  // The user often clicks around the real field (its label, a wrapper, a custom "Upload" button): find the field.
+  function resolvePick(kind, el) {
+    if (!el || el.nodeType !== 1) return el;
+    const control = el.tagName === "LABEL" ? el.control : el.closest?.("label")?.control;
+    if (kind === "type") return isTextField(el) ? el : [el.querySelector?.("input,textarea,[contenteditable='true']"), control].find(isTextField) || el;
+    if (kind === "select") return el.tagName === "SELECT" ? el : el.querySelector?.("select") || (control?.tagName === "SELECT" ? control : el);
+    if (kind === "check") return isCheckInput(el) ? el : [el.querySelector?.("input[type=checkbox],input[type=radio]"), control].find(isCheckInput) || el;
+    if (kind === "upload") {
+      if (isFileInput(el)) return el;
+      const near = [el.querySelector?.("input[type=file]"), control, el.parentElement?.querySelector?.("input[type=file]")].find(isFileInput);
+      if (near) return near;
+      const all = document.querySelectorAll("input[type=file]");
+      return all.length === 1 ? all[0] : el; // most pages have a single (often hidden) file field
+    }
+    if (kind === "submit") return el.closest?.("form") || el;
+    return el;
+  }
+
+  function pickInfo(el) {
+    const info = { tag: el.tagName.toLowerCase(), isPassword: el.tagName === "INPUT" && el.type === "password", multiple: !!el.multiple, accept: el.accept || "" };
+    if (el.tagName === "SELECT") {
+      const option = el.options[el.selectedIndex];
+      info.options = optionsOf(el);
+      info.currentValue = el.value;
+      info.currentText = option ? option.text.trim() : "";
+    } else if (isCheckInput(el)) {
+      info.checked = el.checked;
+    } else if (isTextField(el) && !info.isPassword) {
+      info.currentValue = el.isContentEditable ? el.innerText : el.value;
+    }
+    return info;
+  }
+
+  function stopPick(status) {
+    if (!picker) return;
+    picker.cleanup?.();
+    picker.cleanup = null;
+    picker.host?.remove();
+    picker.host = null;
+    if (status) picker.status = status;
+  }
+
+  function startPick(kind, hint) {
+    if (picker?.status === "picking" && picker.kind === kind && picker.host?.isConnected) return;
+    stopPick();
+    const host = document.createElement("div");
+    host.setAttribute("data-tasktape", "");
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.innerHTML = `
+      <style>
+        .bar { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2147483647; display: flex; gap: 12px; align-items: center;
+               background: #312e81; color: #fff; border-radius: 12px; padding: 10px 12px 10px 16px; width: max-content; max-width: min(820px, calc(100vw - 32px));
+               font: 600 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+        .sub { font-weight: 500; opacity: .85; font-size: 12px; }
+        .sub.warn { color: #fecaca; opacity: 1; font-weight: 700; }
+        .actions { display: flex; gap: 6px; flex: none; }
+        button { all: unset; cursor: pointer; background: rgba(255,255,255,.18); padding: 5px 10px; border-radius: 7px; font-weight: 700; white-space: nowrap; }
+        button:hover { background: rgba(255,255,255,.3); }
+        .box { position: fixed; z-index: 2147483646; pointer-events: none; border: 2px solid #4f46e5; background: rgba(79,70,229,.12); border-radius: 4px; display: none; }
+        .box.bad { border-color: #dc2626; background: rgba(220,38,38,.08); }
+        .tag { position: absolute; left: -2px; top: -24px; background: #4f46e5; color: #fff; font: 600 11px system-ui, sans-serif; padding: 2px 6px;
+               border-radius: 4px; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+        .box.bad .tag { background: #dc2626; }
+      </style>
+      <div class="box"><span class="tag"></span></div>
+      <div class="bar">
+        <div><div class="title"></div><div class="sub"></div></div>
+        <div class="actions"><button type="button" class="pause">Pause to navigate</button><button type="button" class="cancel">Cancel (Esc)</button></div>
+      </div>`;
+    const box = shadow.querySelector(".box");
+    const tag = shadow.querySelector(".tag");
+    const sub = shadow.querySelector(".sub");
+    const pauseButton = shadow.querySelector(".pause");
+    const rule = PICK_RULES[kind];
+    const defaultSub = "Clicks choose an element instead of using the page. Need another page first? Press Pause.";
+    shadow.querySelector(".title").textContent = `TaskTape · click ${hint || "the element for this step"}`;
+    sub.textContent = defaultSub;
+
+    let paused = false;
+    const isOurs = (e) => e.composedPath().includes(host);
+    const candidate = (e) => resolvePick(kind, interactive(e.target) || e.target);
+    const onMove = (e) => {
+      if (paused || isOurs(e)) { box.style.display = "none"; return; }
+      const el = candidate(e);
+      if (!el?.getBoundingClientRect) return;
+      const r = el.getBoundingClientRect();
+      Object.assign(box.style, { display: "block", left: `${r.left - 2}px`, top: `${r.top - 2}px`, width: `${r.width + 4}px`, height: `${r.height + 4}px` });
+      box.classList.toggle("bad", !!rule && !rule.test(el));
+      tag.textContent = `${el.tagName.toLowerCase()} · ${labelFor(el)}`;
+    };
+    const block = (e) => {
+      if (paused || isOurs(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    const onClick = (e) => {
+      if (paused || isOurs(e)) return;
+      block(e);
+      const el = candidate(e);
+      if (rule && !rule.test(el)) {
+        sub.textContent = `That's not ${rule.need}. Please click ${rule.need}.`;
+        sub.classList.add("warn");
+        return;
+      }
+      picker.result = { target: buildTarget(el), info: pickInfo(el) };
+      stopPick("done");
+    };
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      stopPick("cancelled");
+    };
+    const blocked = ["pointerdown", "mousedown", "pointerup", "mouseup", "dblclick", "contextmenu", "auxclick", "submit"];
+    for (const type of blocked) window.addEventListener(type, block, true);
+    window.addEventListener("click", onClick, true);
+    window.addEventListener("mousemove", onMove, true);
+    window.addEventListener("keydown", onKey, true);
+
+    pauseButton.addEventListener("click", () => {
+      paused = !paused;
+      pauseButton.textContent = paused ? "Resume picking" : "Pause to navigate";
+      sub.classList.remove("warn");
+      sub.textContent = paused ? "Paused: use the page normally, then press Resume picking." : defaultSub;
+      if (paused) box.style.display = "none";
+    });
+    shadow.querySelector(".cancel").addEventListener("click", () => stopPick("cancelled"));
+
+    picker = {
+      kind, status: "picking", result: null, host,
+      cleanup: () => {
+        for (const type of blocked) window.removeEventListener(type, block, true);
+        window.removeEventListener("click", onClick, true);
+        window.removeEventListener("mousemove", onMove, true);
+        window.removeEventListener("keydown", onKey, true);
+      },
+    };
+    document.documentElement.appendChild(host);
+  }
+
   // ───────────────────────────── On-page indicator ─────────────────────────────
   let indicatorHost = null;
   let indicatorState = null; // { mode: "record" } | { mode: "run", text, name, done?, state? }
@@ -509,6 +666,17 @@
         return false;
       case "TT_RUN_STATUS":
         setRunStatus(message.status);
+        sendResponse({ ok: true });
+        return false;
+      case "TT_PICK_START":
+        startPick(message.kind, message.hint);
+        sendResponse({ ok: true });
+        return false;
+      case "TT_PICK_STATUS":
+        sendResponse({ status: picker ? picker.status : "none", result: picker?.result ?? null });
+        return false;
+      case "TT_PICK_CANCEL":
+        stopPick("cancelled");
         sendResponse({ ok: true });
         return false;
       case "TT_UPLOAD_PROMPT":

@@ -165,12 +165,15 @@ async function startRun({ id, variables = {}, where = "newTab", tabId: currentTa
     .filter((s) => s.enabled !== false)
     .map((s) => ({ ...s, value: TT.fill(s.value, variables), url: TT.fill(s.url, variables) }));
   if (!steps.length) throw new Error("This automation has no steps to run.");
+  const noElement = steps.findIndex((s) => TT.needsElement(s) && !s.target?.selectors?.length && !s.target?.text);
+  if (noElement >= 0) throw new Error(`Step ${noElement + 1} (${TT.describe(steps[noElement])}) has no element yet. In the manager, press “🎯 Choose it on the website” on that step.`);
   const missing = steps.find((s) => TT.hasPlaceholder(s.value) || TT.hasPlaceholder(s.url));
   if (missing) throw new Error(`A value is missing for: ${TT.describe(missing)}`);
   await locked(async () => {
     await load();
     if (state.recording) throw new Error("Stop the recording before running an automation.");
     if (state.run) throw new Error(`“${state.run.name}” is already running.`);
+    if (pickSession) throw new Error("Finish picking the element first.");
     state.run = { automationId: id, name: automation.name, tabId: null, index: 0, total: steps.length, stop: false };
     await persist();
   });
@@ -332,6 +335,79 @@ async function stopRun() {
   return { ok: true };
 }
 
+// ───────────────────────────── Element picker ─────────────────────────────
+// The manager asks to pick the element of a step: switch to the website tab, let the user click, come back.
+const PICK_GIVE_UP_MS = 10 * 60 * 1000;
+let pickSession = null;
+
+function parseUrl(url) {
+  try { return new URL(url); } catch { return null; }
+}
+
+// Best tab for the step: same page, else same website (most recently used), else open the page.
+async function findTabFor(url) {
+  const wanted = parseUrl(url);
+  const tabs = (await chrome.tabs.query({})).filter((t) => isWebUrl(t.url));
+  const newest = (list) => list.sort((a, b) => (b.lastAccessed || b.id) - (a.lastAccessed || a.id))[0];
+  if (wanted) {
+    const samePage = tabs.filter((t) => { const u = parseUrl(t.url); return u && u.origin === wanted.origin && u.pathname === wanted.pathname; });
+    const sameSite = tabs.filter((t) => parseUrl(t.url)?.origin === wanted.origin);
+    const found = newest(samePage) || newest(sameSite);
+    if (found) return found.id;
+    if (isWebUrl(url)) return (await chrome.tabs.create({ url, active: true })).id;
+  }
+  throw new Error("Open the website in a tab first (or add an “Open a page” step), then try again.");
+}
+
+async function focusTab(tabId) {
+  const tab = await chrome.tabs.update(tabId, { active: true }).catch(() => null);
+  if (tab?.windowId != null) chrome.windows?.update(tab.windowId, { focused: true }).catch(() => {});
+}
+
+async function pickElement({ kind, hint, url }, sender) {
+  await load();
+  if (state.recording || state.run) throw new Error("Wait until the recording or the run is finished.");
+  if (pickSession) throw new Error("TaskTape is already waiting for you to pick an element.");
+  const session = { cancel: false };
+  pickSession = session;
+  const managerTabId = sender.tab?.id;
+  try {
+    const tabId = await findTabFor(url);
+    await focusTab(tabId);
+    await waitComplete(tabId);
+    const start = async () => {
+      await ensureContent(tabId);
+      await sendToTab(tabId, { type: "TT_PICK_START", kind, hint });
+    };
+    await start();
+    const giveUp = Date.now() + PICK_GIVE_UP_MS;
+    for (;;) {
+      if (session.cancel || Date.now() > giveUp) {
+        await sendToTab(tabId, { type: "TT_PICK_CANCEL" });
+        if (session.cancel) return { cancelled: true };
+        throw new Error("No element was picked within 10 minutes.");
+      }
+      const status = await sendToTab(tabId, { type: "TT_PICK_STATUS" });
+      if (status?.status === "done") return { picked: status.result };
+      if (status?.status === "cancelled") return { cancelled: true };
+      if (!status || status.status === "none") {
+        // The user navigated (Pause → another page): start picking again on the new page.
+        await waitComplete(tabId);
+        await start();
+      }
+      await sleep(400); // polling also keeps the service worker awake while the user picks
+    }
+  } finally {
+    if (pickSession === session) pickSession = null;
+    if (managerTabId != null) await focusTab(managerTabId);
+  }
+}
+
+function cancelPick() {
+  if (pickSession) pickSession.cancel = true;
+  return { ok: true };
+}
+
 async function hello(sender) {
   await load();
   const tabId = sender.tab?.id;
@@ -351,6 +427,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     TT_STOP_RECORDING: () => stopRecording(message.save !== false),
     TT_RUN: () => startRun(message),
     TT_STOP_RUN: () => stopRun(),
+    TT_PICK: () => pickElement(message, sender),
+    TT_PICK_CANCEL: () => cancelPick(),
   };
   const handler = handlers[message?.type];
   if (!handler) return false;

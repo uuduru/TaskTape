@@ -12,9 +12,9 @@ No account, no server, no coding. Everything stays in your browser.
 
 - **One-click recording** of clicks, typing, drop-downs, checkboxes, the Enter/Escape keys, form submissions and page changes.
 - **Reliable replay**: each element is remembered several ways (test ids, id, name, label, link, text, position). TaskTape waits for slow pages and elements before acting.
-- **Values asked at run time**: write `{{Customer name}}` in a step, and TaskTape asks for it each time you run. Recorded passwords are **never stored**: they automatically become `{{… password}}` and are asked at each run.
+- **Recorded or asked values**: for each typed text or chosen option, keep the recorded value, or switch to **Ask each run** and TaskTape asks before running, suggesting the recorded value. Recorded passwords are **never stored** and are always asked.
 - **File uploads**: when a step needs a file, the run pauses and a panel in the page asks you to choose it (or drop it). The run continues as soon as the file is attached. Files are never stored.
-- **Step editor**: rename, reorder, disable, duplicate or delete steps, change typed text, add waits, open pages, press keys or wait for an element.
+- **Step editor**: rename, reorder, disable, duplicate or delete steps, and change typed text or chosen options. Add any type of step by hand (click, type, choose, tick, upload, submit, wait, open a page, press a key) by simply **clicking the element on the website**.
 - **Run history** with the step that failed and why.
 - **Import / export** as `.json` to share automations with colleagues.
 - **On-page bar** while recording or running, with a Stop button.
@@ -47,7 +47,27 @@ While recording, a red bar shows how many steps were captured. You can add a pau
 
 ### Values that change at each run
 
-In the manager, replace a typed text by a name between double braces, for example `{{Invoice number}}`. When you run the automation, TaskTape asks for the value. The last values you entered are remembered (except passwords, PINs and tokens).
+Each **Type** and **Choose** step has a switch in the manager:
+
+- **Recorded value**: the text typed (or the option chosen) while recording is used every time.
+- **Ask each run**: TaskTape asks for the value before each run. The question is named after the field (you can rename it), and the recorded value is offered as the suggested answer.
+
+The run form is pre-filled with the last answer you gave, or with the suggestion the first time. Steps with the same question share one answer, so "Customer email" typed in two places is asked only once. Passwords are always asked and never stored or suggested.
+
+Advanced users can also mix fixed text and questions in one value, for example `Order {{Order number}} – urgent`.
+
+### Adding steps by hand
+
+You don't have to record everything again. At the bottom of the step list, choose where the step goes (**Add a step** at the end or after a given step), then pick a step type:
+
+- **On the page:** Click, Type text, Choose an option, Tick a box, Upload a file, Submit a form, Wait for an element
+- **Other:** Open a page, Press a key, Wait
+
+For steps on the page, you choose the element on the website itself, not in the manager. Press **🎯 Choose it on …** and TaskTape switches to the website tab for you. It uses the tab already open on that page, else one on the same site, else it opens the page. A purple bar at the top of the website asks you to **click the element**, and once you do, you're brought back to the manager. The element under the mouse is highlighted with its name. Clicking a label or a custom "Upload" button finds the real field behind it. Need to reach another page first? Press **Pause to navigate**, then **Resume picking**. Press Esc to cancel.
+
+![Picking the element of a new step: the field under the mouse is highlighted](docs/images/pick.png)
+
+The 🎯 button on any step lets you pick its element again. This is the easiest fix when a website changed and a step can't find its element anymore. A step without an element is highlighted, and the automation won't run until one is picked.
 
 ### File uploads
 
@@ -62,7 +82,7 @@ Uploads must go through a normal file field on the page. Drop zones that accept 
 ### Tips for reliable automations
 
 - Use **Slow** speed while testing, then switch to **Normal** or **Fast**.
-- If a step can't find its element, open ⚙ on that step. You can paste a better CSS selector (one per line, most reliable first) or adjust the visible text used as a fallback.
+- If a step can't find its element, press 🎯 on that step and click the element again. Advanced users can also open ⚙ to paste CSS selectors (one per line, most reliable first) or adjust the visible text used as a fallback.
 - Add a **Wait** or **Wait for an element** step after actions that take time, such as generating a report.
 - A step marked **Page · Happens by itself** waits for the page to change after the previous click. Untick it to make TaskTape open that address directly.
 

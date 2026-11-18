@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TaskTape – Record & Replay Browser Tasks",
   "short_name": "TaskTape",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Record the clicks and typing you repeat every day in your browser, then replay them in one click.",
   "author": "Duru Ugochukwu",
   "homepage_url": "https://github.com/uuduru/TaskTape",

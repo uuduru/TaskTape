@@ -14,8 +14,8 @@ function h(tag, props = {}, ...children) {
 }
 
 async function send(type, extra = {}) {
-  const response = await chrome.runtime.sendMessage({ type, ...extra });
-  if (!response?.ok) throw new Error(response?.error || "Something went wrong.");
+  const response = await TT.ask({ type, ...extra });
+  if (!response.ok) throw new Error(response.error || "Something went wrong.");
   return response.result;
 }
 
@@ -44,13 +44,14 @@ async function runNow(automation, variables) {
   }
 }
 
-async function renderVarForm(automation, names) {
+async function renderVarForm(automation) {
   const saved = await TT.getSavedVars(automation.id);
-  const inputs = names.map((name) => h("input", {
-    "data-var": name,
-    type: TT.isSecretName(name) ? "password" : "text",
-    placeholder: name,
-    value: saved[name] ?? "",
+  // Last value used wins; otherwise the value from the recording is suggested. Passwords always start empty.
+  const inputs = TT.promptsOf(automation).map((prompt) => h("input", {
+    "data-var": prompt.name,
+    type: prompt.secret ? "password" : "text",
+    placeholder: prompt.name,
+    value: prompt.secret ? "" : (saved[prompt.name] ?? prompt.defaultValue),
     autocomplete: "off",
   }));
   const go = () => {
@@ -66,7 +67,7 @@ async function renderVarForm(automation, names) {
       h("button", { class: "btn primary small", onclick: go }, "▶ Run now"),
       h("button", { class: "btn ghost small", onclick: () => { openVarsFor = null; render(); } }, "Cancel")),
   );
-  setTimeout(() => inputs[0]?.focus(), 0);
+  setTimeout(() => inputs[0]?.select(), 0);
   return box;
 }
 
@@ -140,7 +141,7 @@ async function render() {
         }, "▶ Run"),
         h("button", { class: "btn small", title: "Edit the steps", onclick: () => chrome.tabs.create({ url: chrome.runtime.getURL(`editor.html?id=${automation.id}`) }) }, "Edit")),
     );
-    if (openVarsFor === automation.id && !busy) item.append(await renderVarForm(automation, vars));
+    if (openVarsFor === automation.id && !busy) item.append(await renderVarForm(automation));
     list.append(item);
   }
   if (!shown.length) list.append(h("li", { class: "empty" }, "No automation matches your search."));

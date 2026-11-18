@@ -21,6 +21,7 @@
     main { padding: 24px 32px 60px; max-width: 1100px; width: 100%; }
     .banner { border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
     .banner.info { background: var(--accent-soft); color: #3730a3; border: 1px solid #c7d2fe; }
+    .banner.warn { background: var(--amber-soft); color: var(--amber); border: 1px solid #fde68a; }
     .banner.new { background: var(--green-soft); color: var(--green); border: 1px solid #bbf7d0; }
     .top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
     .top .title { flex: 1; }
@@ -34,7 +35,7 @@
 
     .section-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; }
     .steps { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .step { display: grid; grid-template-columns: 26px 28px 92px 1fr minmax(180px, 280px) auto; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
+    .step { display: grid; grid-template-columns: 26px 28px 92px 1fr minmax(200px, 280px) auto; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
     .step:first-child { border-top: none; }
     .step.off { opacity: .45; }
     .step.failed { background: var(--red-soft); }
@@ -48,13 +49,28 @@
     .desc .s { font-size: 11px; color: var(--muted); font-family: ui-monospace, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .desc .err { font-size: 12px; color: var(--red); font-weight: 600; margin-top: 2px; }
     .value input, .value select { padding: 5px 8px; font-size: 12px; }
+    .value { display: flex; flex-direction: column; gap: 4px; }
+    .mode { display: inline-flex; align-self: flex-start; background: #f1f5f9; border-radius: 7px; padding: 2px; gap: 2px; }
+    .seg { border: none; background: transparent; border-radius: 5px; padding: 3px 9px; font: inherit; font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .seg.on { background: #fff; color: var(--accent); box-shadow: 0 1px 2px rgba(15,23,42,.12); }
+    .seg:disabled { opacity: .45; cursor: not-allowed; }
+    .value .inline input:not([type=checkbox]) { flex: 1; min-width: 0; }
+    .value .inline .lbl { width: 62px; flex: none; }
     .value .inline { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 3px; }
     .value .inline input { width: auto; }
     .ops { display: flex; gap: 2px; }
     .ops .btn { padding: 3px 7px; }
     .advanced { grid-column: 3 / -1; display: grid; grid-template-columns: 1fr 1fr 120px; gap: 10px; background: var(--bg); border-radius: 8px; padding: 10px; }
     .advanced textarea { font-family: ui-monospace, Consolas, monospace; font-size: 12px; min-height: 70px; }
-    .add-bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--bg); }
+    .add-bar { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: var(--bg); }
+    .add-where { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+    .add-where select { width: auto; max-width: 420px; padding: 4px 8px; font-size: 12px; }
+    .add-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .add-label { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 108px; }
+    .step.missing { background: var(--amber-soft); }
+    .step.picking { background: var(--accent-soft); }
+    .desc .warn { font-size: 12px; color: var(--amber); font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .desc .warn .how { font-weight: 500; color: var(--muted); }
 
     .runs { margin-top: 22px; }
     .runs table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
