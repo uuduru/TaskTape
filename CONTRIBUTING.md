@@ -14,9 +14,10 @@ Thanks for your interest! Every contribution helps, not only code.
 TaskTape is plain JavaScript with no build step.
 
 1. Fork the repository and clone your fork.
-2. Load the folder in `chrome://extensions` (Developer mode → **Load unpacked**).
+2. Load the folder in `chrome://extensions` (Developer mode → **Load unpacked**), or in Firefox with `npm run start:firefox`.
 3. After each change, click ↻ on the extension card and reload the page you test on.
-4. Keep pull requests small and focused, and describe how you tested them.
+4. Run `npm install` once, then `npm test` before opening a pull request. Add a test for the behaviour you change in `tests/`.
+5. Keep pull requests small and focused, and describe how you tested them, ideally in both Chrome and Firefox.
 
 Where things live:
 

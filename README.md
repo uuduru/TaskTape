@@ -2,7 +2,7 @@
 
 **Record the browser tasks you repeat every day, then replay them in one click.**
 
-TaskTape is a Chrome extension for people who do the same clicks and typing again and again: filling the same form, downloading the same report, creating the same ticket. Record the task once; next time, press ▶ Run and watch TaskTape do it.
+TaskTape is a browser extension for **Chrome, Edge and Firefox**, for people who do the same clicks and typing again and again: filling the same form, downloading the same report, creating the same ticket. Record the task once; next time, press ▶ Run and watch TaskTape do it.
 
 No account, no server, no coding. Everything stays in your browser.
 
@@ -10,7 +10,7 @@ No account, no server, no coding. Everything stays in your browser.
 
 ## Features
 
-- **One-click recording** of clicks, typing, drop-downs, checkboxes, the Enter/Escape keys, form submissions and page changes.
+- **One-click recording** of clicks, typing, drop-downs, checkboxes, the Enter/Escape keys, form submissions and page changes. Elements lower down the page are scrolled into view automatically, and a **Scroll** step handles pages that load more content as you scroll.
 - **Reliable replay**: each element is remembered several ways (test ids, id, name, label, link, text, position). TaskTape waits for slow pages and elements before acting.
 - **Recorded or asked values**: for each typed text or chosen option, keep the recorded value, or switch to **Ask each run** and TaskTape asks before running, suggesting the recorded value. Recorded passwords are **never stored** and are always asked.
 - **File uploads**: when a step needs a file, the run pauses and a panel in the page asks you to choose it (or drop it). The run continues as soon as the file is attached. Files are never stored.
@@ -21,13 +21,25 @@ No account, no server, no coding. Everything stays in your browser.
 
 ## Install (developer mode)
 
-1. Download or clone this folder.
-2. Open `chrome://extensions` in Chrome (or `edge://extensions` in Microsoft Edge).
-3. Turn on **Developer mode** (top right).
-4. Click **Load unpacked** and select the `TaskTape` folder.
-5. Pin the TaskTape icon in the toolbar.
+The same folder works in every browser below. Download or clone it first.
+
+### Chrome / Edge
+
+1. Open `chrome://extensions` in Chrome (or `edge://extensions` in Microsoft Edge).
+2. Turn on **Developer mode** (top right).
+3. Click **Load unpacked** and select the `TaskTape` folder.
+4. Pin the TaskTape icon in the toolbar.
 
 After changing the code, click the ↻ reload button on the extension card.
+
+### Firefox (121 or newer)
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on…** and select the `manifest.json` file in the `TaskTape` folder.
+3. Pin the TaskTape icon: click the puzzle-piece icon in the toolbar → ⚙ next to TaskTape → **Pin to Toolbar**.
+4. The first time you press Record or Run, Firefox may ask you to let TaskTape **access your data for all websites**. Allow it, because TaskTape can't record or replay on websites without it. You can also allow it beforehand under `about:addons` → TaskTape → **Permissions**.
+
+A temporary add-on is removed when Firefox restarts. To keep it installed, use the signed version from addons.mozilla.org (see [Publishing](#publishing)). After changing the code, click **Reload** on the add-on in `about:debugging`.
 
 ## How to use
 
@@ -61,13 +73,25 @@ Advanced users can also mix fixed text and questions in one value, for example `
 You don't have to record everything again. At the bottom of the step list, choose where the step goes (**Add a step** at the end or after a given step), then pick a step type:
 
 - **On the page:** Click, Type text, Choose an option, Tick a box, Upload a file, Submit a form, Wait for an element
-- **Other:** Open a page, Press a key, Wait
+- **Other:** Open a page, Scroll, Press a key, Wait
 
 For steps on the page, you choose the element on the website itself, not in the manager. Press **🎯 Choose it on …** and TaskTape switches to the website tab for you. It uses the tab already open on that page, else one on the same site, else it opens the page. A purple bar at the top of the website asks you to **click the element**, and once you do, you're brought back to the manager. The element under the mouse is highlighted with its name. Clicking a label or a custom "Upload" button finds the real field behind it. Need to reach another page first? Press **Pause to navigate**, then **Resume picking**. Press Esc to cancel.
 
 ![Picking the element of a new step: the field under the mouse is highlighted](docs/images/pick.png)
 
 The 🎯 button on any step lets you pick its element again. This is the easiest fix when a website changed and a step can't find its element anymore. A step without an element is highlighted, and the automation won't run until one is picked.
+
+### Scrolling
+
+You don't need to scroll for a button lower down the page. TaskTape finds it and scrolls it into view by itself before clicking, typing or ticking.
+
+Add a **Scroll** step only for pages that **load more content as you scroll** (endless lists, "load more" feeds, lazy tables). Put it before the step that needs that content:
+
+- **To the bottom (loads more):** keeps scrolling while new content appears, then stops when the page stops growing.
+- **Until an element appears:** scrolls down until the element you chose (🎯) is on the page. This is the best choice when you know what you're looking for.
+- **To the top** / **By an amount** (in pixels, negative to scroll up).
+
+It also works on web apps that scroll inside a panel rather than the whole page. A Scroll step can take up to 30 seconds by default. For very long lists, raise it with ⚙ → **Max wait**.
 
 ### File uploads
 
@@ -88,7 +112,7 @@ Uploads must go through a normal file field on the page. Drop zones that accept 
 
 ## Limitations
 
-- Works on normal websites (`http`, `https`, and local files if you allow file access). Browser pages (`chrome://…`) and the Chrome Web Store can't be automated, by Chrome's rules.
+- Works on normal websites (`http`, `https`, and local files if you allow file access). Browser pages (`chrome://…`, `about:…`) and the add-on stores (Chrome Web Store, addons.mozilla.org) can't be automated, by the browsers' own rules.
 - Elements inside iframes and closed shadow DOM are not recorded yet.
 - Drag-and-drop (including drop-only upload zones), hovering menus and right-clicks are not recorded.
 - Captchas and two-factor prompts must be completed by a person.
@@ -102,31 +126,66 @@ TaskTape makes no network requests of its own and has no analytics. Automations 
 
 | File | Role |
 | --- | --- |
-| `manifest.json` | Extension definition (Manifest V3) |
-| `background.js` | Service worker: recording session, replay engine, run history |
+| `manifest.json` | Extension definition (Manifest V3, one file for Chrome, Edge and Firefox) |
+| `background.js` | Recording session, replay engine, run history (a service worker in Chrome/Edge, a background script in Firefox) |
 | `content.js` | Injected into pages: records actions, executes steps, shows the on-page bar |
 | `lib.js` | Shared helpers: storage, variables, step descriptions, import/export |
 | `popup.html` / `popup.js` | Toolbar popup: record, run, list |
 | `editor.html` / `editor.js` | Manager: edit steps, settings, history, import/export |
 | `ui.css` | Shared styles |
-| `icons/icon.svg` | Icon source |
+| `icons/` | Icon source (`icon.svg`) and PNG sizes |
 | `docs/images/` | Screenshots used in this README |
+| `tests/` | Automated tests (`npm test`) |
+| `web-ext-config.mjs` | Settings for Mozilla's `web-ext` tool (Firefox checks and the store package) |
+
+## Development
+
+You need [Node.js](https://nodejs.org) only for the tests and packaging, not to use the extension.
+
+```bash
+npm install            # once
+npm test               # run the automated tests (recording, replay, uploads, picker, Chrome and Firefox modes)
+npm run lint:firefox   # check the extension with Mozilla's rules
+npm run start:firefox  # open Firefox with TaskTape loaded
+npm run build          # create the zip to upload to the stores (in web-ext-artifacts/)
+```
+
+`npm run lint:firefox` shows one expected warning ("background.service_worker is not supported"). Firefox uses the `scripts` entry instead, and Chrome uses `service_worker`.
 
 ## Publishing
 
-**GitHub**: create a repository, push this folder and add a few screenshots or a short GIF of a recording to this README.
+**Package**: run `npm run build`. The zip in `web-ext-artifacts/` contains only the extension's files and works for every store below.
 
 **Chrome Web Store** (one-time developer fee):
 
-1. Export `icons/icon.svg` to PNG at 16, 48 and 128 px, save them as `icons/icon16.png`, `icons/icon48.png` and `icons/icon128.png`, then add this to `manifest.json`:
-   ```json
-   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
-   ```
-2. Zip the folder contents (not the folder itself).
-3. In the Chrome Web Store developer dashboard, upload the zip, add screenshots (1280×800), a description and a link to `PRIVACY.md`.
-4. Explain the permissions: **access to all sites** is needed to record and replay on any website the user chooses; **scripting** injects the recorder into tabs opened before installation; **storage** saves automations locally.
+1. In the Chrome Web Store developer dashboard, upload the zip, add screenshots (1280×800), a description and a link to `PRIVACY.md`.
+2. Explain the permissions: **access to all sites** is needed to record and replay on any website the user chooses; **scripting** injects the recorder into tabs opened before installation; **storage** saves automations locally.
 
-The same zip can be published on the Microsoft Edge Add-ons store.
+The same zip can be published on the **Microsoft Edge Add-ons** store.
+
+**Firefox Add-ons (addons.mozilla.org, free)**:
+
+1. Create a developer account on addons.mozilla.org and choose **Submit a New Add-on**.
+2. Choose to list it on the site, upload the same zip, and answer the questions about data collection: TaskTape collects none.
+3. Because the code is not minified, you don't need to send separate source code.
+4. Mozilla reviews and signs the add-on. Firefox only allows signed add-ons to be installed permanently.
+
+The add-on ID is `tasktape@uuduru` (in `manifest.json`). Keep it unchanged so updates reach existing users.
+
+**Firefox, signed for yourself only (unlisted)**: this gets a permanent install without a public listing.
+
+1. Sign in on addons.mozilla.org and create API keys at **Developer Hub → Tools → Manage API Keys** (`https://addons.mozilla.org/developers/addon/api/key/`). You get a *JWT issuer* and a *JWT secret*. Never commit them or share them.
+2. In PowerShell, in the TaskTape folder:
+   ```powershell
+   npm install
+   $env:WEB_EXT_API_KEY = "your JWT issuer"
+   $env:WEB_EXT_API_SECRET = "your JWT secret"
+   npm run sign:firefox
+   ```
+3. Mozilla checks the add-on automatically, usually within a few minutes. The signed file appears in `web-ext-artifacts/` as a `.xpi`.
+4. Install it: open `about:addons`, click ⚙ → **Install Add-on From File…** and choose the `.xpi` (or drag the file onto a Firefox window). It stays installed after restarts.
+
+Each upload to Mozilla needs a **new version number**, including between unlisted and listed. Increase `version` in `manifest.json` (for example `1.2.1`) before signing or submitting again.
 
 ## Ideas for next versions
 

@@ -1,5 +1,7 @@
-// TaskTape background service worker: owns the recording session and runs replays.
-importScripts("lib.js");
+// TaskTape background: owns the recording session and runs replays.
+// Chrome/Edge run this file as a service worker (lib.js loaded below).
+// Firefox runs it as a background script, after lib.js (see "scripts" in manifest.json).
+if (typeof importScripts === "function" && typeof TT === "undefined") importScripts("lib.js");
 
 // ───────────────────────────── Session state ─────────────────────────────
 // Kept in chrome.storage.session so it survives the service worker being suspended.
@@ -45,6 +47,15 @@ const sendToTab = (tabId, message) => chrome.tabs.sendMessage(tabId, message, { 
 
 const isWebUrl = (url) => /^(https?|file):/i.test(url || "");
 
+const PROTECTED_PAGES = "Browser pages and the add-on stores (Chrome Web Store, addons.mozilla.org) are protected by the browser.";
+const NO_ACCESS = "TaskTape needs permission to work on websites. Press Record or Run again and allow access when your browser asks (in Firefox: right-click the TaskTape icon → Manage Extension → Permissions).";
+
+// Chrome grants website access at install. Firefox may let the user grant it later.
+async function hasSiteAccess() {
+  if (!chrome.permissions?.contains) return true;
+  return chrome.permissions.contains({ origins: ["<all_urls>"] }).catch(() => true);
+}
+
 function sameUrl(a, b) {
   try { return new URL(a).href === new URL(b).href; } catch { return a === b; }
 }
@@ -65,7 +76,8 @@ async function ensureContent(tabId) {
   if (pong?.ok) return;
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   if (!tab) throw new Error("The tab was closed.");
-  if (!isWebUrl(tab.url)) throw new Error("TaskTape can't work on this page. Browser pages and the Chrome Web Store are protected.");
+  if (!isWebUrl(tab.url)) throw new Error(`TaskTape can't work on this page. ${PROTECTED_PAGES}`);
+  if (!(await hasSiteAccess())) throw new Error(NO_ACCESS);
   await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }).catch(() => {});
 }
 
@@ -73,7 +85,8 @@ async function ensureContent(tabId) {
 async function startRecording({ tabId, name }) {
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   if (!tab) throw new Error("No tab to record.");
-  if (!isWebUrl(tab.url)) throw new Error("Open the website where the task starts, then press Record. TaskTape can't record on this page.");
+  if (!isWebUrl(tab.url)) throw new Error(`Open the website where the task starts, then press Record. TaskTape can't record on this page. ${PROTECTED_PAGES}`);
+  if (!(await hasSiteAccess())) throw new Error(NO_ACCESS);
   await locked(async () => {
     await load();
     if (state.recording) throw new Error("A recording is already in progress.");
@@ -260,12 +273,15 @@ async function runStep(step, tabId, timeoutMs, position = "") {
   while (Date.now() < deadline) {
     if (state.run?.stop) return;
     await ensureContent(tabId);
-    const response = await sendToTab(tabId, { type: "TT_EXECUTE", step, timeout: Math.max(500, deadline - Date.now()) });
+    // Rounds of at most 20 s: a long wait inside the page must not let Chrome suspend this worker.
+    const response = await sendToTab(tabId, { type: "TT_EXECUTE", step, timeout: Math.max(500, Math.min(20000, deadline - Date.now())) });
     if (response?.ok) return;
     if (response && !response.retry) throw new Error(response.error);
     lastError = response?.error || "The page is still loading…";
-    await sleep(300); // the page may be navigating: try again on the new page
+    await sleep(300); // the page may be navigating, or a round ended: try again
   }
+  // "Scroll to the bottom" on an endless page: having scrolled for the whole time allowed is fine.
+  if (step.type === "scroll" && (step.mode || "bottom") === "bottom") return;
   throw new Error(lastError || `Timed out: ${TT.describe(step)}`);
 }
 

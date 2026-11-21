@@ -2,14 +2,21 @@
   "manifest_version": 3,
   "name": "TaskTape – Record & Replay Browser Tasks",
   "short_name": "TaskTape",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "description": "Record the clicks and typing you repeat every day in your browser, then replay them in one click.",
   "author": "Duru Ugochukwu",
   "homepage_url": "https://github.com/uuduru/TaskTape",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": ["storage", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["lib.js", "background.js"]
   },
   "content_scripts": [
     {
@@ -20,7 +27,24 @@
   ],
   "action": {
     "default_title": "TaskTape",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
   },
-  "options_page": "editor.html"
+  "options_ui": {
+    "page": "editor.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "tasktape@uuduru",
+      "strict_min_version": "121.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
 }

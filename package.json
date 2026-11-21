@@ -1,0 +1,20 @@
+{
+  "name": "tasktape",
+  "version": "1.3.0",
+  "private": true,
+  "description": "Record the browser tasks you repeat every day, then replay them in one click.",
+  "license": "MIT",
+  "author": "Duru Ugochukwu",
+  "repository": "github:uuduru/TaskTape",
+  "scripts": {
+    "test": "node tests/run.js",
+    "lint:firefox": "web-ext lint",
+    "start:firefox": "web-ext run",
+    "build": "web-ext build",
+    "sign:firefox": "web-ext sign --channel=unlisted"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0",
+    "web-ext": "^8.0.0"
+  }
+}

@@ -33,9 +33,13 @@ async function activeTabId() {
 let openVarsFor = null; // automation id whose variable form is open
 let filter = "";
 
+const NO_ACCESS = "TaskTape needs access to websites to work. Please allow it when your browser asks.";
+
 async function runNow(automation, variables) {
+  const access = TT.ensureSiteAccess(); // first, while the click still counts as a user action
   showError(null);
   try {
+    if (!(await access)) throw new Error(NO_ACCESS);
     if (Object.keys(variables).length) await TT.saveVars(automation.id, variables);
     await send("TT_RUN", { id: automation.id, variables, where: automation.settings?.runIn || "newTab", tabId: await activeTabId() });
     window.close();
@@ -148,8 +152,10 @@ async function render() {
 }
 
 $("#record").addEventListener("click", async () => {
+  const access = TT.ensureSiteAccess(); // first, while the click still counts as a user action
   showError(null);
   try {
+    if (!(await access)) throw new Error(NO_ACCESS);
     await send("TT_START_RECORDING", { tabId: await activeTabId(), name: $("#name").value });
     window.close(); // give the page back to the user
   } catch (error) {

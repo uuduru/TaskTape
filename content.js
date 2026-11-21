@@ -286,7 +286,69 @@
     }
   }
 
+  // The area that scrolls: usually the page itself, but many web apps scroll inside a large panel instead.
+  function scrollContainer() {
+    const root = document.scrollingElement || document.documentElement;
+    if (root.scrollHeight > root.clientHeight + 10) return root;
+    let best = null;
+    let bestArea = 0;
+    for (const el of document.querySelectorAll("body *")) {
+      if (el.scrollHeight <= el.clientHeight + 10) continue;
+      const overflow = getComputedStyle(el).overflowY;
+      if (overflow !== "auto" && overflow !== "scroll") continue;
+      const area = el.clientWidth * el.clientHeight;
+      if (area > bestArea) { best = el; bestArea = area; }
+    }
+    return best || root;
+  }
+
+  async function doScroll(step, timeout) {
+    const end = Date.now() + timeout;
+    const box = scrollContainer();
+    const mode = step.mode || "bottom";
+    if (mode === "top") {
+      box.scrollTo({ top: 0, behavior: "instant" });
+      return { ok: true };
+    }
+    if (mode === "by") {
+      box.scrollBy({ top: Number(step.amount) || 600, behavior: "instant" });
+      return { ok: true };
+    }
+    if (mode === "bottom") {
+      // Keep going while the page grows (lazy loading), until it stops growing or time is up.
+      let lastHeight = -1;
+      let stable = 0;
+      while (Date.now() < end && stable < 2) {
+        box.scrollTo({ top: box.scrollHeight, behavior: "instant" });
+        await sleep(700);
+        stable = box.scrollHeight === lastHeight ? stable + 1 : 0;
+        lastHeight = box.scrollHeight;
+      }
+      // Still growing when this round's time is up: ask for another round (the step's total time is checked by the background).
+      return stable >= 2 ? { ok: true } : { ok: false, retry: true, error: "The page keeps loading more content." };
+    }
+    // "until": scroll down step by step until the element exists, or the end of the page is reached.
+    const label = step.target?.label || step.target?.text || "the element";
+    let stuck = 0;
+    for (;;) {
+      const el = locate(step.target);
+      if (el) {
+        el.scrollIntoView({ block: "center", behavior: "instant" });
+        flash(el);
+        return { ok: true };
+      }
+      if (Date.now() >= end) return { ok: false, retry: true, error: `Scrolled for a while without finding “${label}”. Give this step more time (⚙ → Max wait).` };
+      const before = box.scrollTop;
+      const height = box.scrollHeight;
+      box.scrollBy({ top: Math.max(200, box.clientHeight * 0.8), behavior: "instant" });
+      await sleep(500);
+      stuck = box.scrollTop === before && box.scrollHeight === height ? stuck + 1 : 0;
+      if (stuck >= 3) return { ok: false, error: `Reached the end of the page without finding “${label}”.` };
+    }
+  }
+
   async function execute(step, timeout) {
+    if (step.type === "scroll") return doScroll(step, timeout);
     const needsTarget = !(step.type === "key" && !step.target?.selectors?.length);
     let el = null;
     if (needsTarget) {

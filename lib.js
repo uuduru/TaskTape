@@ -8,7 +8,8 @@ const TT = (() => {
   const AUTO = "auto:";
   const RUNS = "runs:";
   const VARS = "vars:";
-  const STEP_TYPES = ["navigate", "click", "type", "select", "check", "key", "submit", "upload", "wait", "waitFor"];
+  const STEP_TYPES = ["navigate", "click", "type", "select", "check", "key", "submit", "upload", "scroll", "wait", "waitFor"];
+  const SCROLL_MODES = ["bottom", "top", "by", "until"];
   // {{Customer name}} — letters, digits, spaces, dot, dash, underscore.
   const VAR_RE = /\{\{\s*([A-Za-z][\w .-]*?)\s*\}\}/g;
 
@@ -82,7 +83,7 @@ const TT = (() => {
 
   // Steps that act on an element of the page (a "key" step may also have one, but doesn't need it).
   const ELEMENT_TYPES = ["click", "type", "select", "check", "submit", "upload", "waitFor"];
-  const needsElement = (step) => ELEMENT_TYPES.includes(step?.type);
+  const needsElement = (step) => ELEMENT_TYPES.includes(step?.type) || (step?.type === "scroll" && step.mode === "until");
   const hasElement = (step) => !!(step?.target?.selectors?.length || step?.target?.text);
 
   // A "type" or "select" step whose whole value is one {{Question}} is asked at each run.
@@ -133,6 +134,14 @@ const TT = (() => {
   };
 
   function describe(step) {
+    if (step.type === "scroll") {
+      const amount = Number(step.amount) || 600;
+      const what = step.target?.label || step.target?.text;
+      if (step.mode === "top") return "Scroll to the top";
+      if (step.mode === "by") return `Scroll ${amount < 0 ? "up" : "down"} ${Math.abs(amount)} px`;
+      if (step.mode === "until") return what ? `Scroll down until “${what}” appears` : "Scroll down until an element appears";
+      return "Scroll to the bottom (loads more content)";
+    }
     if (UNPICKED[step.type] && !step.target?.label && !step.target?.text && !step.target?.selectors?.length) return UNPICKED[step.type];
     const label = step.target?.label || step.target?.text || "element";
     switch (step.type) {
@@ -181,6 +190,8 @@ const TT = (() => {
           ms: Number(s.ms) || undefined,
           timeout: Number(s.timeout) || undefined,
           optionText: typeof s.optionText === "string" ? s.optionText : undefined,
+          mode: SCROLL_MODES.includes(s.mode) ? s.mode : undefined,
+          amount: Number(s.amount) || undefined,
           recordedValue: typeof s.recordedValue === "string" ? s.recordedValue : undefined,
           secret: s.secret === true ? true : undefined,
           multiple: s.multiple === true ? true : undefined,
@@ -204,6 +215,14 @@ const TT = (() => {
       exportedAt: new Date().toISOString(),
       automations: automations.map(({ id, createdAt, updatedAt, ...rest }) => rest),
     };
+  }
+
+  // Firefox may install TaskTape without access to websites until the user allows it.
+  // Must be called first thing in a click handler (browsers only show the prompt for a user action).
+  // Resolves true at once, without any prompt, when access is already granted (always the case in Chrome).
+  function ensureSiteAccess() {
+    if (!chrome.permissions?.request) return Promise.resolve(true);
+    return chrome.permissions.request({ origins: ["<all_urls>"] }).catch(() => false);
   }
 
   // Talk to the background worker from the popup / manager. Always resolves to { ok, result } or { ok: false, error }.
@@ -231,10 +250,10 @@ const TT = (() => {
   }
 
   return {
-    AUTO, RUNS, VARS, STEP_TYPES, uid,
+    AUTO, RUNS, VARS, STEP_TYPES, SCROLL_MODES, uid,
     listAutomations, getAutomation, saveAutomation, deleteAutomation,
     getRuns, addRun, getSavedVars, saveVars, isSecretName,
-    ask, variablesOf, fill, hasPlaceholder, ELEMENT_TYPES, needsElement, hasElement, askedName, toVarName, promptsOf, describe, shortUrl, newAutomation, parseImport, exportData, timeAgo,
+    ask, ensureSiteAccess, variablesOf, fill, hasPlaceholder, ELEMENT_TYPES, needsElement, hasElement, askedName, toVarName, promptsOf, describe, shortUrl, newAutomation, parseImport, exportData, timeAgo,
   };
 })();
 

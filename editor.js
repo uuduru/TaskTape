@@ -13,7 +13,7 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 
-const TYPE_LABEL = { navigate: "Page", click: "Click", type: "Type", select: "Choose", check: "Tick", key: "Key", submit: "Submit", upload: "Upload", wait: "Wait", waitFor: "Wait for" };
+const TYPE_LABEL = { navigate: "Page", click: "Click", type: "Type", select: "Choose", check: "Tick", key: "Key", submit: "Submit", upload: "Upload", scroll: "Scroll", wait: "Wait", waitFor: "Wait for" };
 
 const params = new URLSearchParams(location.search);
 let automations = [];
@@ -118,9 +118,13 @@ async function askForValues(automation) {
   });
 }
 
+const NO_ACCESS = "TaskTape needs access to websites to work. Please allow it when your browser asks.";
+
 async function runCurrent() {
   if (!current) return;
+  const access = TT.ensureSiteAccess(); // first, while the click still counts as a user action
   await saveNow();
+  if (!(await access)) return alert(NO_ACCESS);
   const names = TT.variablesOf(current);
   let variables = {};
   if (names.length) {
@@ -252,6 +256,22 @@ function valueEditor(step) {
       return h("div", { class: "value" },
         h("div", { class: "hint", style: "margin: 0;" }, "The run pauses here and asks you for the file."),
         step.value ? h("div", { class: "inline", title: "File used when recording (the file itself is not stored)" }, `Recorded with: ${step.value}`) : null);
+    case "scroll": {
+      const mode = selectInput([
+        ["bottom", "To the bottom (loads more)"],
+        ["top", "To the top"],
+        ["by", "By an amount"],
+        ["until", "Until an element appears"],
+      ], step.mode || "bottom", (v) => {
+        step.mode = v;
+        // "Until an element appears" needs the element: go and pick it right away.
+        if (v === "until" && !TT.hasElement(step)) pickFor(step.id);
+      });
+      if (step.mode !== "by") return h("div", { class: "value" }, mode);
+      const amount = h("input", { type: "number", step: "100", value: String(step.amount || 600) });
+      amount.addEventListener("input", () => { step.amount = Number(amount.value) || 600; scheduleSave(); });
+      return h("div", { class: "value" }, mode, h("label", { class: "inline", title: "Use a negative number to scroll up" }, amount, "pixels (− = up)"));
+    }
     case "wait": {
       const input = h("input", { type: "number", min: "0.1", step: "0.5", value: String((step.ms || 1000) / 1000) });
       input.addEventListener("input", () => { step.ms = Math.max(100, Math.round(Number(input.value) * 1000) || 1000); scheduleSave(); });
@@ -342,11 +362,12 @@ const NEW_STEPS = {
   submit: () => ({ type: "submit", target: EMPTY_TARGET() }),
   waitFor: () => ({ type: "waitFor", target: EMPTY_TARGET() }),
   navigate: () => ({ type: "navigate", url: "https://", auto: false }),
+  scroll: () => ({ type: "scroll", mode: "bottom", timeout: 30 }),
   key: () => ({ type: "key", value: "Enter" }),
   wait: () => ({ type: "wait", ms: 2000 }),
 };
 const ELEMENT_BUTTONS = [["click", "Click"], ["type", "Type text"], ["select", "Choose an option"], ["check", "Tick a box"], ["upload", "Upload a file"], ["submit", "Submit a form"], ["waitFor", "Wait for an element"]];
-const OTHER_BUTTONS = [["navigate", "Open a page"], ["key", "Press a key"], ["wait", "Wait"]];
+const OTHER_BUTTONS = [["navigate", "Open a page"], ["scroll", "Scroll"], ["key", "Press a key"], ["wait", "Wait"]];
 const PICK_HINT = {
   click: "the button, link or element to click",
   type: "the text field to type in",
@@ -355,6 +376,7 @@ const PICK_HINT = {
   upload: "the file field (or its Upload button)",
   submit: "any field of the form to submit",
   waitFor: "the element to wait for",
+  scroll: "the element to scroll to (it may be further down the page)",
 };
 
 let insertAfter = "end"; // "end" or the id of the step after which new steps go
@@ -389,7 +411,9 @@ function urlForStep(index) {
 }
 
 async function pickFor(stepId) {
+  const access = TT.ensureSiteAccess(); // first, while the click still counts as a user action
   await saveNow();
+  if (!(await access)) return alert(NO_ACCESS);
   const index = current.steps.findIndex((s) => s.id === stepId);
   if (index < 0) return;
   const kind = current.steps[index].type;
