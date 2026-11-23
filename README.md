@@ -6,6 +6,8 @@ TaskTape is a browser extension for **Chrome, Edge and Firefox**, for people who
 
 No account, no server, no coding. Everything stays in your browser.
 
+**[➜ Install TaskTape from the Chrome Web Store](https://chromewebstore.google.com/detail/mhpnjpbjcionekcakioncjgpjbidlhgb)** (Chrome and Edge, free)
+
 ![The TaskTape manager showing a recorded automation with its steps](docs/images/manager.png)
 
 ## Features
@@ -19,9 +21,15 @@ No account, no server, no coding. Everything stays in your browser.
 - **Import / export** as `.json` to share automations with colleagues.
 - **On-page bar** while recording or running, with a Stop button.
 
-## Install (developer mode)
+## Install
 
-The same folder works in every browser below. Download or clone it first.
+**Chrome / Edge:** install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/mhpnjpbjcionekcakioncjgpjbidlhgb) (Edge accepts Chrome Web Store extensions after you click "Allow extensions from other stores").
+
+**Firefox:** coming soon on addons.mozilla.org. Until then, use developer mode below.
+
+## Install from the source code (developer mode)
+
+The same folder works in every browser below. Download or clone it first. If you also installed TaskTape from a store, disable that copy while testing, or you'll have two TaskTape icons.
 
 ### Chrome / Edge
 
