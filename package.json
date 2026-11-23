@@ -4,7 +4,7 @@
   "private": true,
   "description": "Record the browser tasks you repeat every day, then replay them in one click.",
   "license": "MIT",
-  "author": "Duru Ugochukwu",
+  "author": "uuduru",
   "repository": "github:uuduru/TaskTape",
   "scripts": {
     "test": "node tests/run.js",
